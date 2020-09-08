@@ -191,6 +191,12 @@ public class Cocos2dxDownloader {
                             try {
 
                                 if(!(response.code() >= 200 && response.code() <= 206)) {
+                                    if (response.code() == 416) {
+                                        File file = new File(path + downloader._tempFileNameSuffix);
+                                        if (file.exists() && file.isFile()) {
+                                            file.delete();
+                                        }
+                                    }
                                     downloader.onFinish(id, -2, response.message(), null);
                                     return;
                                 }
