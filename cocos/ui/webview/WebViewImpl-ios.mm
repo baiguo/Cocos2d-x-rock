@@ -42,6 +42,7 @@
 @property (nonatomic) std::function<void(std::string url)> didFinishLoading;
 @property (nonatomic) std::function<void(std::string url)> didFailLoading;
 @property (nonatomic) std::function<void(std::string url)> onJsCallback;
+@property (nonatomic,assign) NSString* wechatPayUrl;
 
 @property(nonatomic, readonly, getter=canGoBack) BOOL canGoBack;
 @property(nonatomic, readonly, getter=canGoForward) BOOL canGoForward;
@@ -121,6 +122,10 @@
     if (!self.uiWebView.superview) {
         auto eaglview = (CCEAGLView*)cocos2d::Application::getInstance()->getView();
         [eaglview addSubview:self.uiWebView];
+    }
+    
+    if(@available(iOS 11.0, *)){
+        self.uiWebView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     }
 }
 
@@ -222,6 +227,70 @@
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     NSString *url = [[navigationAction request].URL.absoluteString stringByRemovingPercentEncoding];
     NSString* scheme = [navigationAction request].URL.scheme;
+
+    NSURL *URL = [navigationAction request].URL;
+    NSString *myScheme = @"www.10fenkexue.com";
+    if ([URL.host isEqualToString:@"wx.tenpay.com"]) {
+
+        NSArray *array = [url componentsSeparatedByString:@"redirect_url="];
+        if([array count] == 2){
+            self.wechatPayUrl = [[NSString alloc] initWithString:[array objectAtIndex:1]];
+        }
+        
+        decisionHandler(WKNavigationActionPolicyAllow);
+        NSURLComponents *cmps = [[NSURLComponents alloc] initWithURL:URL resolvingAgainstBaseURL:YES];
+        NSString *redirect_url = nil;
+        for (NSURLQueryItem *item in cmps.queryItems) {
+            if ([item.name isEqualToString:@"redirect_url"]) {
+                redirect_url = item.value;
+                break;
+            }
+        }
+        if (redirect_url == nil) return;
+        NSURL *redirect_URL = [NSURL URLWithString:redirect_url];
+        if (redirect_URL == nil) return;
+        NSString *replaceScheme = redirect_URL.scheme;
+        // 如果replaceScheme已经被替换过了就不再替换了
+        if (replaceScheme == nil || [replaceScheme isEqualToString:myScheme]) return;
+        NSString *my_redirect_url = [redirect_url stringByReplacingOccurrencesOfString:replaceScheme withString:myScheme];
+        NSString *urlAbsoluteString = [URL.absoluteString stringByReplacingPercentEscapesUsingEncoding:(NSUTF8StringEncoding)];
+        NSString *my_requestUrl = [urlAbsoluteString stringByReplacingOccurrencesOfString:redirect_url withString:my_redirect_url];
+        NSURL *my_requestURL = [NSURL URLWithString:my_requestUrl];
+        NSMutableURLRequest *my_request = [NSMutableURLRequest requestWithURL:my_requestURL];
+        if (my_requestURL == nil) return;
+        my_request.allHTTPHeaderFields = [navigationAction request].allHTTPHeaderFields;
+        // 让webView加载被修改过的request
+        // 这会导致本方法再次被调用哦
+        [webView loadRequest:my_request];
+        return;
+    }
+
+     if ([url hasPrefix:@"alipays://"] || [url hasPrefix:@"alipay://"]) {
+          [[UIApplication sharedApplication]openURL:[navigationAction request].URL];
+         //bSucc是否成功调起支付宝
+     }
+     else if ([url hasPrefix:@"weixin://"]) {
+         [[UIApplication sharedApplication]openURL:[navigationAction request].URL];
+         //bSucc是否成功调起微信
+     }
+     else if ([URL.scheme isEqualToString:myScheme]) {
+         // 在微信支付完成或失败后回到APP会调用
+         // 将xxx.faker.com://www.myFaker.com/epay…
+         // 修改成 https://www.myFaker.com/epay…
+         // 让webView重新加载
+         decisionHandler(WKNavigationActionPolicyCancel);
+
+         NSString *urlAbsoluteString = self.wechatPayUrl; //[URL.absoluteString stringByReplacingPercentEscapesUsingEncoding:(NSUTF8StringEncoding)];
+         NSString *schemeDetail = [NSString stringWithFormat:@"%@://",myScheme];
+         NSString *targetUrl = [urlAbsoluteString stringByReplacingOccurrencesOfString:schemeDetail withString:@"https://"];
+         NSURL *targetURL = [NSURL URLWithString:targetUrl];
+         //NSURL *targetURL = [NSURL URLWithString:self.wechatPayUrl];
+         NSURLRequest *request = [NSURLRequest requestWithURL:targetURL];
+         [webView loadRequest:request];
+         return;
+     }
+    
+    
     if ([scheme isEqualToString:self.jsScheme]) {
         self.onJsCallback(url.UTF8String);
         decisionHandler(WKNavigationActionPolicyCancel);

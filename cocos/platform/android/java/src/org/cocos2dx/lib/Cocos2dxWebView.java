@@ -26,8 +26,14 @@
 package org.cocos2dx.lib;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
+import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -90,7 +96,20 @@ public class Cocos2dxWebView extends WebView {
         }
 
         this.setWebViewClient(new Cocos2dxWebViewClient());
-        this.setWebChromeClient(new WebChromeClient());
+        this.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                super.onProgressChanged(view, newProgress);
+            }
+
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    //直接同意即可     deny是拒绝
+                    request.grant(request.getResources());
+                }
+            }
+        });
     }
 
     public void setJavascriptInterfaceScheme(String scheme) {
@@ -104,7 +123,34 @@ public class Cocos2dxWebView extends WebView {
     class Cocos2dxWebViewClient extends WebViewClient {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, final String urlString) {
+
             Cocos2dxActivity activity = (Cocos2dxActivity)getContext();
+            if (urlString.startsWith("weixin://wap/pay?")) {
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(urlString));
+                activity.startActivity(intent);
+                return true;
+
+            }
+
+            if(urlString.startsWith("alipays:") || urlString.startsWith("alipay")) {
+                try {
+                    activity.startActivity(new Intent("android.intent.action.VIEW", Uri.parse(urlString)));
+                } catch (Exception e) {
+                    new AlertDialog.Builder((Cocos2dxActivity)getContext())
+                            .setMessage("未检测到支付宝客户端，请安装后重试。")
+                            .setPositiveButton("立即安装", new DialogInterface.OnClickListener() {
+
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    Uri alipayUrl = Uri.parse("https://d.alipay.com");
+                                    activity.startActivity(new Intent("android.intent.action.VIEW", alipayUrl));
+                                }
+                            }).setNegativeButton("取消", null).show();
+                }
+                return true;
+            }
 
             try {
                 URI uri = URI.create(urlString);
