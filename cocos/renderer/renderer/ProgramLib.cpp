@@ -172,6 +172,13 @@ ProgramLib::ProgramLib(DeviceGraphics* device, std::vector<Template>& templates)
 
 ProgramLib::~ProgramLib()
 {
+    for(auto it = _cache.begin(); it != _cache.end(); it++){
+        if(it->second){
+            it->second->release();
+        }
+    }
+    _cache.clear();
+    
     RENDERER_SAFE_RELEASE(_device);
     _device = nullptr;
 }

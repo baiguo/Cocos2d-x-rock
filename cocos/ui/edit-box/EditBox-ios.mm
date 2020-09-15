@@ -266,7 +266,9 @@ namespace
         if (@available(iOS 11.0, *))
         {
             auto safeAreaInsets = view.safeAreaInsets;
-            viewRect.origin.x += safeAreaInsets.left;
+            if([UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeRight){
+                viewRect.origin.x += safeAreaInsets.left;
+            }
             viewRect.size.width -= safeAreaInsets.left;
         }
 
@@ -345,6 +347,7 @@ namespace
 
 -(void)keyboardWillHide: (NSNotification*) notification
 {
+    cocos2d::EditBox::complete();
     cocos2d::EditBox::hide();
 }
 @end
@@ -392,6 +395,10 @@ namespace
 @implementation TextViewDelegate
 - (BOOL) textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
 {
+    if (textView.text.length >= g_maxLength && text.length > range.length) {
+        return NO;
+    }
+
     // REFINE: check length limit before text changed
     return YES;
 }

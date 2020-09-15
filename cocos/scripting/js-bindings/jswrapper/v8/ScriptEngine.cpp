@@ -281,7 +281,7 @@ namespace se {
             thiz->_isErrorHandleWorking = true;
 
             Value errorHandler;
-            if (thiz->_globalObj->getProperty("__errorHandler", &errorHandler) && errorHandler.isObject() && errorHandler.toObject()->isFunction())
+            if (thiz->_globalObj && thiz->_globalObj->getProperty("__errorHandler", &errorHandler) && errorHandler.isObject() && errorHandler.toObject()->isFunction())
             {
                 ValueArray args;
                 args.push_back(resouceNameVal);
@@ -366,6 +366,8 @@ namespace se {
         cleanup();
         SE_LOGD("Initializing V8, version: %s\n", v8::V8::GetVersion());
         ++_vmId;
+        
+        _engineThreadId = std::this_thread::get_id();
 
         for (const auto& hook : _beforeInitHookArray)
         {
@@ -394,7 +396,8 @@ namespace se {
 
         NativePtrToObjectMap::init();
         NonRefNativePtrCreatedByCtorMap::init();
-
+        
+        Object::setup();
         Class::setIsolate(_isolate);
         Object::setIsolate(_isolate);
 
@@ -589,7 +592,8 @@ namespace se {
 
     void ScriptEngine::garbageCollect()
     {
-        SE_LOGD("GC begin ..., (js->native map) size: %d, all objects: %d\n", (int)NativePtrToObjectMap::size(), (int)__objectMap.size());
+        int objSize = __objectMap ? (int)__objectMap->size() : -1;
+        SE_LOGD("GC begin ..., (js->native map) size: %d, all objects: %d\n", (int)NativePtrToObjectMap::size(), objSize);
         const double kLongIdlePauseInSeconds = 1.0;
         _isolate->ContextDisposedNotification();
         _isolate->IdleNotificationDeadline(_platform->MonotonicallyIncreasingTime() + kLongIdlePauseInSeconds);
@@ -597,7 +601,8 @@ namespace se {
         // garbage and will therefore also invoke all weak callbacks of actually
         // unreachable persistent handles.
         _isolate->LowMemoryNotification();
-        SE_LOGD("GC end ..., (js->native map) size: %d, all objects: %d\n", (int)NativePtrToObjectMap::size(), (int)__objectMap.size());
+        objSize = __objectMap ? (int)__objectMap->size() : -1;
+        SE_LOGD("GC end ..., (js->native map) size: %d, all objects: %d\n", (int)NativePtrToObjectMap::size(), objSize);
     }
 
     bool ScriptEngine::isGarbageCollecting()
@@ -617,6 +622,13 @@ namespace se {
 
     bool ScriptEngine::evalString(const char* script, ssize_t length/* = -1 */, Value* ret/* = nullptr */, const char* fileName/* = nullptr */)
     {
+        if(_engineThreadId != std::this_thread::get_id())
+        {
+            // `evalString` should run in main thread
+            assert(false);
+            return false;
+        }
+        
         assert(script != nullptr);
         if (length < 0)
             length = strlen(script);

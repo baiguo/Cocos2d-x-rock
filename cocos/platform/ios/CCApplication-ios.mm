@@ -170,6 +170,12 @@ namespace
 
     prevTime = std::chrono::steady_clock::now();
     
+    UIApplicationState state = [UIApplication sharedApplication].applicationState;
+    if (state == UIApplicationStateInactive || state == UIApplicationStateBackground)
+    {
+        return;
+    }
+    
     bool downsampleEnabled = _application->isDownsampleEnabled();
     if (downsampleEnabled)
         _application->getRenderTexture()->prepare();
@@ -181,6 +187,7 @@ namespace
         _application->getRenderTexture()->draw();
     
     [(CCEAGLView*)(_application->getView()) swapBuffers];
+    
     cocos2d::PoolManager::getInstance()->getCurrentPool()->clear();
     
     now = std::chrono::steady_clock::now();

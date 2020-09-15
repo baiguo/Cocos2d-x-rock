@@ -30,6 +30,7 @@
 
 #include "Base.h"
 #include "../Value.hpp"
+#include <thread>
 
 #if SE_ENABLE_INSPECTOR
 namespace node {
@@ -326,7 +327,9 @@ namespace se {
         bool _isWaitForConnect;
 
         uint32_t _vmId;
-
+        
+        std::thread::id _engineThreadId;
+        
         bool _isValid;
         bool _isGarbageCollecting;
         bool _isInCleanup;
