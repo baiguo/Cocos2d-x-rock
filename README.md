@@ -9,12 +9,10 @@ rock：岩石; 石山; 礁石; 巨石块; 岩块;
 
 
 ### 使用
-1.简单方式
-
+#### 1.简单方式
 git clone代码之后，命名为cocos2d-x， 覆盖掉creator自带的cocos2d-x， 我是mac系统，路径为/Applications/CocosCreator2.2.2.app/Contents/Resources/cocos2d-x 
 ，如果是windows也是类似替换掉
 
-2.灵活方式
-
-git clone代码之后，命名为cocos2d-x，如果对原生比较熟悉的同学，可以把cocos2d-x重新依赖一下到自定义的文件夹
+#### 2.灵活方式
+git clone代码之后，命名为cocos2d-x，如果对原生比较熟悉的同学，可以把cocos2d-x重新依赖一下到自定义的文件夹，对xcode和as比较熟练的同学可以这样操作，当然如果不熟练推荐使用第一种方式
 
