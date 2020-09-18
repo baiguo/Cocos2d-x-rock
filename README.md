@@ -2,6 +2,9 @@
 rock：岩石; 石山; 礁石; 巨石块; 岩块;
 大家使用cocos creator 做原生开发都经历过，ios大量崩溃 为此起名rock就代表稳定。此项目在cocos creator2.2.2版本的cococs2d-x-lite的基础上修改了大量的原生部分的崩溃，通过bugly测试，ios崩溃率保持在0.5%左右
 
+下面是使用这个代码后的ios崩溃率效果：
+![image](https://github.com/baiguo/Cocos2d-x-rock/blob/master/image/1.png)
+
 
 ### 版本
 此版本基于cocos creator2.2.2，所以完全兼容2.2.2版本creator打出的原生平台包
